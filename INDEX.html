@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comprar Bitcoin — Checkout</title>
+  <script src="https://cdn.conekta.io/js/latest/conekta.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f4f4f0;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .checkout-wrap {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      max-width: 880px;
+      width: 100%;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 40px rgba(0,0,0,0.10);
+      background: #fff;
+    }
+
+    /* ── Panel izquierdo ── */
+    .left-panel {
+      background: #1a1a1a;
+      color: #fff;
+      padding: 2rem 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #666;
+      margin: 0 0 8px;
+    }
+
+    .btc-logo {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: #F7931A;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; font-weight: 700; color: #fff;
+      margin: 0 auto 0.75rem;
+    }
+
+    .price-display { text-align: center; }
+    .price-display .amount {
+      font-size: 28px; font-weight: 600;
+      font-family: 'Courier New', monospace;
+      color: #fff;
+    }
+    .price-display .sub {
+      font-size: 12px; color: #666; margin-top: 3px;
+    }
+
+    .change-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 500;
+      padding: 4px 10px; border-radius: 20px;
+      margin: 0 auto;
+    }
+    .badge-up   { background: rgba(52,211,153,0.15); color: #34d399; }
+    .badge-down { background: rgba(248,113,113,0.15); color: #f87171; }
+
+    .pkg-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .pkg {
+      border: 1px solid #2e2e2e;
+      border-radius: 10px;
+      padding: 10px 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .pkg:hover { border-color: #555; background: #222; }
+    .pkg.selected { border-color: #F7931A; background: #221700; }
+    .pkg .btc-amt { font-size: 13px; font-weight: 600; color: #fff; font-family: 'Courier New', monospace; }
+    .pkg .mxn-amt { font-size: 11px; color: #666; margin-top: 3px; }
+    .pkg.selected .mxn-amt { color: #F7931A; }
+
+    .divider {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: #555;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: #2a2a2a;
+    }
+
+    .custom-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .custom-row input {
+      flex: 1; background: #111; border: 1px solid #2e2e2e;
+      border-radius: 8px; padding: 9px 12px;
+      color: #fff; font-size: 14px;
+      font-family: 'Courier New', monospace;
+      outline: none; transition: border-color 0.15s;
+    }
+    .custom-row input:focus { border-color: #F7931A; }
+    .custom-row input::placeholder { color: #444; }
+    .custom-equiv {
+      font-size: 11px; color: #666;
+      white-space: nowrap; min-width: 90px; text-align: right;
+    }
+
+    .summary-box {
+      background: #111; border-radius: 10px;
+      border: 1px solid #2a2a2a; padding: 12px 14px;
+    }
+    .srow {
+      display: flex; justify-content: space-between;
+      font-size: 13px; color: #666; margin: 4px 0;
+    }
+    .srow.total {
+      color: #fff; font-size: 14px; font-weight: 600;
+      border-top: 1px solid #2a2a2a;
+      padding-top: 8px; margin-top: 6px;
+    }
+    .srow.total span:last-child { color: #F7931A; }
+
+    /* ── Panel derecho ── */
+    .right-panel { padding: 2rem 1.75rem; background: #fff; }
+
+    .card-brands { display: flex; gap: 7px; margin-bottom: 1.25rem; }
+    .brand-pill {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 6px;
+      border: 1px solid #e0e0e0; color: #ccc;
+      background: #fafafa; transition: all 0.15s;
+    }
+    .brand-pill.active { border-color: #1a1a1a; color: #1a1a1a; }
+
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block; font-size: 12px;
+      color: #888; margin-bottom: 5px; font-weight: 500;
+    }
+    .field input {
+      width: 100%; padding: 10px 13px;
+      border: 1px solid #e0e0e0; border-radius: 10px;
+      font-size: 14px; font-family: 'Courier New', monospace;
+      color: #1a1a1a; background: #fafafa; outline: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .field input[name="cardName"] { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .field input:focus  { border-color: #1a1a1a; background: #fff; }
+    .field input.is-err { border-color: #ef4444; background: #fff5f5; }
+    .field input.is-ok  { border-color: #22c55e; }
+    .errmsg { font-size: 11px; color: #ef4444; min-height: 16px; margin-top: 3px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    #globalError {
+      display: none; background: #fff5f5;
+      border: 1px solid #ef4444; border-radius: 8px;
+      padding: 10px 14px; font-size: 13px; color: #b91c1c;
+      margin-bottom: 1rem;
+    }
+
+    .pay-btn {
+      width: 100%; padding: 13px;
+      background: #F7931A; color: #fff;
+      border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; display: flex;
+      align-items: center; justify-content: center; gap: 8px;
+      margin-top: 4px; transition: opacity 0.15s, transform 0.1s;
+    }
+    .pay-btn:hover { opacity: 0.88; }
+    .pay-btn:active { transform: scale(0.98); }
+    .pay-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    .secure-note {
+      display: flex; align-items: center; justify-content: center;
+      gap: 5px; font-size: 11px; color: #bbb; margin-top: 10px;
+    }
+
+    /* ── Éxito ── */
+    .success-screen {
+      display: none; flex-direction: column;
+      align-items: center; text-align: center;
+      padding: 2.5rem 1.5rem; gap: 14px;
+    }
+    .success-icon {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: #f0fdf4; display: flex;
+      align-items: center; justify-content: center; font-size: 32px;
+    }
+
+    /* ── Spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .checkout-wrap { grid-template-columns: 1fr; }
+      .left-panel, .right-panel { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="checkout-wrap" id="checkoutWrap">
+
+  <!-- Panel izquierdo: info de Bitcoin -->
+  <div class="left-panel">
+
+    <div>
+      <div class="btc-logo">₿</div>
+      <div class="price-display">
+        <div class="amount" id="btcPrice">$1,823,450</div>
+        <div class="sub">Precio actual por 1 BTC en MXN</div>
+      </div>
+      <div style="text-align:center; margin-top: 10px;">
+        <span class="change-badge badge-up" id="changeBadge">▲ +2.41% hoy</span>
+      </div>
+    </div>
+
+    <div>
+      <p class="section-label">Selecciona un paquete</p>
+      <div class="pkg-grid" id="pkgGrid">
+        <div class="pkg selected" data-btc="0.0001" onclick="selectPkg(this)">
+          <div class="btc-amt">0.0001 BTC</div>
+          <div class="mxn-amt" id="p0">—</div>
+        </div>
+        <div class="pkg" data-btc="0.001" onclick="selectPkg(this)">
+          <div class="btc-amt">0.001 BTC</div>
+          <div class="mxn-amt" id="p1">—</div>
+        </div>
+        <div class="pkg" data-btc="0.005" onclick="selectPkg(this)">
+          <div class="btc-amt">0.005 BTC</div>
+          <div class="mxn-amt" id="p2">—</div>
+        </div>
+        <div class="pkg" data-btc="0.01" onclick="selectPkg(this)">
+          <div class="btc-amt">0.01 BTC</div>
+          <div class="mxn-amt" id="p3">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">o ingresa monto personalizado</div>
+
+    <div class="custom-row">
+      <input type="number" id="customMxn" placeholder="Cantidad en MXN" min="100" step="100" oninput="onCustomInput()">
+      <span class="custom-equiv" id="customBtc">≈ — BTC</span>
+    </div>
+
+    <div class="summary-box">
+      <div class="srow"><span>Cantidad BTC</span><span id="sumBtc">—</span></div>
+      <div class="srow"><span>Precio BTC</span><span id="sumPrice">—</span></div>
+      <div class="srow"><span>Comisión (1.5%)</span><span id="sumFee">—</span></div>
+      <div class="srow total"><span>Total a pagar</span><span id="sumTotal">—</span></div>
+    </div>
+
+  </div>
+
+  <!-- Panel derecho: formulario de pago -->
+  <div class="right-panel">
+
+    <div id="formView">
+      <p class="section-label" style="color:#aaa; margin-bottom:1.25rem;">Pago con tarjeta</p>
+
+      <div class="card-brands">
+        <span class="brand-pill" id="brand-visa">VISA</span>
+        <span class="brand-pill" id="brand-mc">MC</span>
+        <span class="brand-pill" id="brand-amex">AMEX</span>
+      </div>
+
+      <div id="globalError"></div>
+
+      <div class="field">
+        <label>Número de tarjeta</label>
+        <input type="text" name="cardNumber" id="cardNumber"
+               placeholder="0000 0000 0000 0000" maxlength="19"
+               inputmode="numeric" autocomplete="cc-number">
+        <div class="errmsg" id="err-num"></div>
+      </div>
+
+      <div class="field">
+        <label>Nombre en la tarjeta</label>
+        <input type="text" name="cardName" id="cardName"
+               placeholder="JUAN PÉREZ" autocomplete="cc-name">
+        <div class="errmsg" id="err-name"></div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label>Vencimiento</label>
+          <input type="text" name="cardExp" id="cardExp"
+                 placeholder="MM/AA" maxlength="5"
+                 inputmode="numeric" autocomplete="cc-exp">
+          <div class="errmsg" id="err-exp"></div>
+        </div>
+        <div class="field">
+          <label>CVV</label>
+          <input type="text" name="cardCvv" id="cardCvv"
+                 placeholder="•••" maxlength="4"
+                 inputmode="numeric" autocomplete="cc-csc">
+          <div class="errmsg" id="err-cvv"></div>
+        </div>
+      </div>
+
+      <button class="pay-btn" id="payBtn" onclick="handlePay()">
+        ₿ <span id="payLabel">Comprar Bitcoin</span>
+      </button>
+
+      <div class="secure-note">
+        🔐 Cifrado SSL · Datos protegidos por Conekta
+      </div>
+    </div>
+
+    <!-- Pantalla de éxito -->
+    <div class="success-screen" id="successView">
+      <div class="success-icon">✅</div>
+      <p style="font-size:18px;font-weight:700;">¡Compra exitosa!</p>
+      <p style="font-size:14px;color:#666;" id="successMsg"></p>
+      <p style="font-size:12px;color:#aaa;">Tu BTC será acreditado en tu wallet en los próximos minutos.</p>
+      <button onclick="resetForm()"
+              style="margin-top:8px;padding:9px 22px;border-radius:8px;border:1px solid #e0e0e0;
+                     background:#fff;font-size:13px;cursor:pointer;color:#1a1a1a;">
+        Nueva compra
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ─── CONFIGURACIÓN ────────────────────────────────────────────────────────
+  const CONEKTA_PUBLIC_KEY = 'key_xxxxxxxxxxxxxxxx'; // 👈 Tu public key de Conekta
+  const BACKEND_URL        = '/api/cobrar.php';       // 👈 Ruta a tu backend PHP
+  const FEE_RATE           = 0.015;                   // Comisión 1.5%
+
+  Conekta.setPublicKey(CONEKTA_PUBLIC_KEY);
+  Conekta.setLanguage('es');
+
+  // ─── PRECIO BTC ──────────────────────────────────────────────────────────
+  // En producción, reemplaza esto con un fetch a tu API o a CoinGecko/Binance
+  let BTC_PRICE_MXN = 1823450;
+
+  // Ejemplo de cómo obtener el precio real desde CoinGecko (descomenta para usar):
+  // fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=mxn')
+  //   .then(r => r.json())
+  //   .then(d => { BTC_PRICE_MXN = d.bitcoin.mxn; init(); });
+
+  // ─── ESTADO ──────────────────────────────────────────────────────────────
+  const PKGS = [0.0001, 0.001, 0.005, 0.01];
+  let selectedBtc = PKGS[0];
+
+  // ─── INICIALIZACIÓN ───────────────────────────────────────────────────────
+  function init() {
+    document.getElementById('btcPrice').textContent =
+      '$' + fmt(BTC_PRICE_MXN);
+
+    PKGS.forEach((btc, i) => {
+      const mxn = btc * BTC_PRICE_MXN;
+      document.getElementById('p' + i).textContent = '$' + fmt(mxn) + ' MXN';
+    });
+
+    updateSummary(selectedBtc);
+  }
+
+  // ─── SELECCIÓN DE PAQUETE ─────────────────────────────────────────────────
+  function selectPkg(el) {
+    document.querySelectorAll('.pkg').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedBtc = parseFloat(el.dataset.btc);
+    document.getElementById('customMxn').value = '';
+    document.getElementById('customBtc').textContent = '≈ — BTC';
+    updateSummary(selectedBtc);
+  }
+
+  function onCustomInput() {
+    const mxn = parseFloat(document.getElementById('customMxn').value);
+    document.querySelectorAll('.pkg').forEach(p => p.classList.remove('selected'));
+    if (!mxn || mxn < 100) {
+      document.getElementById('customBtc').textContent = '≈ — BTC';
+      updateSummary(null);
+      return;
+    }
+    const btc = mxn / BTC_PRICE_MXN;
+    selectedBtc = btc;
+    document.getElementById('customBtc').textContent = '≈ ' + fmtBtc(btc) + ' BTC';
+    updateSummary(btc);
+  }
+
+  function updateSummary(btc) {
+    if (!btc) {
+      ['sumBtc','sumPrice','sumFee','sumTotal'].forEach(id =>
+        document.getElementById(id).textContent = '—');
+      document.getElementById('payLabel').textContent = 'Comprar Bitcoin';
+      return;
+    }
+    const base  = btc * BTC_PRICE_MXN;
+    const fee   = base * FEE_RATE;
+    const total = base + fee;
+    document.getElementById('sumBtc').textContent   = fmtBtc(btc) + ' BTC';
+    document.getElementById('sumPrice').textContent = '$' + fmt(BTC_PRICE_MXN) + ' MXN';
+    document.getElementById('sumFee').textContent   = '$' + fmt(fee) + ' MXN';
+    document.getElementById('sumTotal').textContent = '$' + fmt(total) + ' MXN';
+    document.getElementById('payLabel').textContent = 'Pagar $' + fmt(total) + ' MXN';
+  }
+
+  // ─── UTILIDADES ──────────────────────────────────────────────────────────
+  function fmt(n) {
+    return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtBtc(n) { return n.toFixed(6); }
+
+  function luhn(num) {
+    let s = 0, odd = false;
+    for (let i = num.length - 1; i >= 0; i--) {
+      let d = parseInt(num[i]);
+      if (odd) { d *= 2; if (d > 9) d -= 9; }
+      s += d; odd = !odd;
+    }
+    return s % 10 === 0;
+  }
+
+  function detectBrand(num) {
+    if (/^4/.test(num))      return 'visa';
+    if (/^5[1-5]/.test(num)) return 'mc';
+    if (/^3[47]/.test(num))  return 'amex';
+    return null;
+  }
+
+  function updateBrands(num) {
+    const brand = detectBrand(num);
+    ['visa','mc','amex'].forEach(b => {
+      document.getElementById('brand-' + b)
+        .classList.toggle('active', brand === b || (!brand && num.length === 0));
+    });
+  }
+
+  function setField(field, state, msg = '') {
+    const input = document.getElementById('card' + field[0].toUpperCase() + field.slice(1));
+    const errEl = document.getElementById('err-' + field);
+    input.classList.remove('is-err', 'is-ok');
+    if (state === 'error') { input.classList.add('is-err'); errEl.textContent = msg; }
+    else if (state === 'ok') { input.classList.add('is-ok'); errEl.textContent = ''; }
+    else { errEl.textContent = ''; }
+  }
+
+  // ─── EVENTOS DE INPUTS ────────────────────────────────────────────────────
+  document.getElementById('cardNumber').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 16);
+    e.target.value = v.replace(/(.{4})/g, '$1 ').trim();
+    updateBrands(v);
+    setField('number', null);
+    hideGlobalError();
+  });
+
+  document.getElementById('cardName').addEventListener('input', e => {
+    e.target.value = e.target.value.toUpperCase();
+    setField('name', null);
+  });
+
+  document.getElementById('cardExp').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length >= 2) v = v.slice(0, 2) + '/' + v.slice(2, 4);
+    e.target.value = v;
+    setField('exp', null);
+  });
+
+  document.getElementById('cardCvv').addEventListener('input', e => {
+    e.target.value = e.target.value.replace(/\D/g, '');
+    setField('cvv', null);
+  });
+
+  // ─── VALIDACIÓN ──────────────────────────────────────────────────────────
+  function validateForm() {
+    let valid = true;
+
+    const num = document.getElementById('cardNumber').value.replace(/\s/g, '');
+    if (num.length < 15 || !luhn(num)) {
+      setField('number', 'error', 'Número de tarjeta inválido'); valid = false;
+    } else setField('number', 'ok');
+
+    const name = document.getElementById('cardName').value.trim();
+    if (name.length < 3) {
+      setField('name', 'error', 'Ingresa el nombre como aparece en la tarjeta'); valid = false;
+    } else setField('name', 'ok');
+
+    const expParts = (document.getElementById('cardExp').value + '/').split('/');
+    const month = parseInt(expParts[0]), year = parseInt('20' + expParts[1]);
+    const now = new Date();
+    const expOk = expParts[0] && expParts[1] && month >= 1 && month <= 12
+      && new Date(year, month - 1) >= new Date(now.getFullYear(), now.getMonth());
+    if (!expOk) {
+      setField('exp', 'error', 'Fecha inválida'); valid = false;
+    } else setField('exp', 'ok');
+
+    const cvv = document.getElementById('cardCvv').value;
+    const isAmex = detectBrand(num) === 'amex';
+    if (cvv.length < (isAmex ? 4 : 3)) {
+      setField('cvv', 'error', 'CVV inválido'); valid = false;
+    } else setField('cvv', 'ok');
+
+    return valid;
+  }
+
+  // ─── FLUJO DE PAGO ───────────────────────────────────────────────────────
+  function handlePay() {
+    if (!selectedBtc) {
+      showGlobalError('Selecciona o ingresa una cantidad de Bitcoin primero.');
+      return;
+    }
+    hideGlobalError();
+    if (!validateForm()) return;
+
+    const btn = document.getElementById('payBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Procesando...';
+
+    const expParts = document.getElementById('cardExp').value.split('/');
+
+    Conekta.Token.create(
+      {
+        card: {
+          number:    document.getElementById('cardNumber').value.replace(/\s/g, ''),
+          name:      document.getElementById('cardName').value.trim(),
+          exp_year:  '20' + expParts[1],
+          exp_month: expParts[0],
+          cvc:       document.getElementById('cardCvv').value,
+        }
+      },
+      onTokenSuccess,
+      onTokenError
+    );
+  }
+
+  function onTokenSuccess(token) {
+    const base    = selectedBtc * BTC_PRICE_MXN;
+    const fee     = base * FEE_RATE;
+    const total   = Math.round((base + fee) * 100); // centavos
+
+    fetch(BACKEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token_id:     token.id,
+        amount:       total,
+        currency:     'MXN',
+        description:  'Compra de ' + fmtBtc(selectedBtc) + ' BTC',
+        customer_name: document.getElementById('cardName').value.trim(),
+        btc_amount:   selectedBtc,
+        btc_price:    BTC_PRICE_MXN,
+      })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showSuccess(data.order_id || '', document.getElementById('cardNumber').value.slice(-4));
+      } else {
+        showGlobalError(data.message || 'Pago rechazado. Intenta con otra tarjeta.');
+        resetBtn();
+      }
+    })
+    .catch(() => {
+      showGlobalError('Error de conexión. Verifica tu internet e intenta de nuevo.');
+      resetBtn();
+    });
+  }
+
+  function onTokenError(error) {
+    showGlobalError('Error al validar la tarjeta: ' + (error.message_to_purchaser || error.message));
+    resetBtn();
+  }
+
+  // ─── UI HELPERS ──────────────────────────────────────────────────────────
+  function showSuccess(orderId, last4) {
+    document.getElementById('formView').style.display = 'none';
+    const sv = document.getElementById('successView');
+    sv.style.display = 'flex';
+    document.getElementById('successMsg').textContent =
+      'Compraste ' + fmtBtc(selectedBtc) + ' BTC' +
+      (orderId ? ' · Pedido #' + orderId : '') +
+      ' · Tarjeta terminada en ' + last4;
+  }
+
+  function showGlobalError(msg) {
+    const el = document.getElementById('globalError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  function hideGlobalError() {
+    document.getElementById('globalError').style.display = 'none';
+  }
+
+  function resetBtn() {
+    const btn = document.getElementById('payBtn');
+    btn.disabled = false;
+    btn.innerHTML = '₿ <span id="payLabel">Comprar Bitcoin</span>';
+    updateSummary(selectedBtc);
+  }
+
+  function resetForm() {
+    document.getElementById('formView').style.display = 'block';
+    document.getElementById('successView').style.display = 'none';
+    ['cardNumber','cardName','cardExp','cardCvv'].forEach(id => {
+      const el = document.getElementById(id);
+      el.value = '';
+      el.classList.remove('is-err', 'is-ok');
+    });
+    ['num','name','exp','cvv'].forEach(f =>
+      document.getElementById('err-' + f).textContent = '');
+    hideGlobalError();
+    resetBtn();
+    updateBrands('');
+    document.querySelectorAll('.pkg').forEach((p, i) =>
+      p.classList.toggle('selected', i === 0));
+    selectedBtc = PKGS[0];
+    document.getElementById('customMxn').value = '';
+    document.getElementById('customBtc').textContent = '≈ — BTC';
+    updateSummary(selectedBtc);
+  }
+
+  // ─── INICIO ──────────────────────────────────────────────────────────────
+  init();
+  updateBrands('');
+</script>
+</body>
+</html>
